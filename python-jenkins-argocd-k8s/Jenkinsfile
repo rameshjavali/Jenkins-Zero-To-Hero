@@ -44,7 +44,10 @@ pipeline {
         stage('Update Manifest & Push') {
             steps {
                 script {
-                    withCredentials([usernamePassword(credentialsId: 'GitHub-Creds', usernameVariable: 'GIT_USER', passwordVariable: 'GIT_PASS')]) {
+                    withCredentials([
+                        usernamePassword(credentialsId: 'dockerhub-creds', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS'),
+                        usernamePassword(credentialsId: 'GitHub-Creds', usernameVariable: 'GIT_USER', passwordVariable: 'GIT_PASS')
+                    ]) {
                         sh """
                         sed -i "s|image: .*|image: $DOCKER_USER/todoapp:${BUILD_NUMBER}|g" deploy.yaml
                         git config user.email "jenkins@ci.local"
