@@ -23,7 +23,7 @@ pipeline {
                     withCredentials([usernamePassword(credentialsId: 'dockerhub-creds', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
                         sh """
                         echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin
-                        docker build -t $DOCKER_USER/todoapp:${BUILD_NUMBER} .
+                        docker build -t $DOCKER_USER/todoapp:${BUILD_NUMBER} -f python-jenkins-argocd-k8s/Dockerfile python-jenkins-argocd-k8s/
                         docker push $DOCKER_USER/todoapp:${BUILD_NUMBER}
                         """
                     }
