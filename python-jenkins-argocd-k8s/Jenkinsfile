@@ -1,67 +1,62 @@
 pipeline {
-    
-    agent any 
-    
+    agent any
+
     environment {
         IMAGE_TAG = "${BUILD_NUMBER}"
     }
-    
+
     stages {
-        
-        stage('Checkout'){
-           steps {
-                git credentialsId: 'f87a34a8-0e09-45e7-b9cf-6dc68feac670', 
-                url: 'https://github.com/iam-veeramalla/cicd-end-to-end',
-                branch: 'main'
-           }
+
+        // 1. Checkout application source code
+        stage('Checkout App Repo') {
+            steps {
+                git credentialsId: 'GitHub-Creds',
+                    url: 'https://github.com/rameshjavali/Jenkins-Zero-To-Hero/python-jenkins-argocd-k8s/Jenkinsfile',
+                    branch: 'main'
+            }
         }
 
-        stage('Build Docker'){
-            steps{
-                script{
-                    sh '''
-                    echo 'Buid Docker Image'
-                    docker build -t abhishekf5/cicd-e2e:${BUILD_NUMBER} .
-                    '''
+        // 2. Build and push Docker image
+        stage('Build & Push Docker Image') {
+            steps {
+                script {
+                    withCredentials([usernamePassword(credentialsId: 'dockerhub-creds', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+                        sh """
+                        echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin
+                        docker build -t $DOCKER_USER/todoapp:${BUILD_NUMBER} .
+                        docker push $DOCKER_USER/todoapp:${BUILD_NUMBER}
+                        """
+                    }
                 }
             }
         }
 
-        stage('Push the artifacts'){
-           steps{
-                script{
-                    sh '''
-                    echo 'Push to Repo'
-                    docker push abhishekf5/cicd-e2e:${BUILD_NUMBER}
-                    '''
-                }
+        // 3. Checkout Kubernetes manifests repo
+        stage('Checkout Manifests Repo') {
+            steps {
+                git credentialsId: 'GitHub-Creds',
+                    url: 'https:/github.com/rameshjavali/todoapp-manifests.git',
+                    branch: 'main'
             }
         }
-        
-        stage('Checkout K8S manifest SCM'){
+
+        // 4. Update deployment.yaml with new image tag and push back
+        stage('Update Manifest & Push') {
             steps {
-                git credentialsId: 'f87a34a8-0e09-45e7-b9cf-6dc68feac670', 
-                url: 'https://github.com/iam-veeramalla/cicd-demo-manifests-repo.git',
-                branch: 'main'
-            }
-        }
-        
-        stage('Update K8S manifest & push to Repo'){
-            steps {
-                script{
-                    withCredentials([usernamePassword(credentialsId: 'f87a34a8-0e09-45e7-b9cf-6dc68feac670', passwordVariable: 'GIT_PASSWORD', usernameVariable: 'GIT_USERNAME')]) {
-                        sh '''
-                        cat deploy.yaml
-                        sed -i '' "s/32/${BUILD_NUMBER}/g" deploy.yaml
-                        cat deploy.yaml
+                script {
+                    withCredentials([usernamePassword(credentialsId: 'GitHub-Creds',', usernameVariable: 'GIT_USER', passwordVariable: 'GIT_PASS')]) {
+                        sh """
+                        sed -i "s|image: .*|image: $DOCKER_USER/todoapp:${BUILD_NUMBER}|g" deploy.yaml
+                        git config user.email "jenkins@ci.local"
+                        git config user.name "Jenkins CI"
                         git add deploy.yaml
-                        git commit -m 'Updated the deploy yaml | Jenkins Pipeline'
-                        git remote -v
-                        git push https://github.com/iam-veeramalla/cicd-demo-manifests-repo.git HEAD:main
-                        '''                        
+                        git commit -m "Update image tag to ${BUILD_NUMBER}"
+                        git push https://${GIT_USER}:${GIT_PASS}@github.com/your-org/todoapp-manifests.git HEAD:main
+                        """
                     }
                 }
             }
         }
     }
 }
+
