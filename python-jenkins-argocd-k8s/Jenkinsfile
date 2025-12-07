@@ -11,7 +11,7 @@ pipeline {
         stage('Checkout App Repo') {
             steps {
                 git credentialsId: 'GitHub-Creds',
-                    url: 'https://github.com/rameshjavali/Jenkins-Zero-To-Hero/python-jenkins-argocd-k8s/Jenkinsfile',
+                    url: 'https://github.com/rameshjavali/Jenkins-Zero-To-Hero.git',
                     branch: 'main'
             }
         }
@@ -35,7 +35,7 @@ pipeline {
         stage('Checkout Manifests Repo') {
             steps {
                 git credentialsId: 'GitHub-Creds',
-                    url: 'https:/github.com/rameshjavali/todoapp-manifests.git',
+                    url: 'https://github.com/rameshjavali/todoapp-manifests.git',
                     branch: 'main'
             }
         }
@@ -44,14 +44,14 @@ pipeline {
         stage('Update Manifest & Push') {
             steps {
                 script {
-                    withCredentials([usernamePassword(credentialsId: 'GitHub-Creds',', usernameVariable: 'GIT_USER', passwordVariable: 'GIT_PASS')]) {
+                    withCredentials([usernamePassword(credentialsId: 'GitHub-Creds', usernameVariable: 'GIT_USER', passwordVariable: 'GIT_PASS')]) {
                         sh """
                         sed -i "s|image: .*|image: $DOCKER_USER/todoapp:${BUILD_NUMBER}|g" deploy.yaml
                         git config user.email "jenkins@ci.local"
                         git config user.name "Jenkins CI"
                         git add deploy.yaml
                         git commit -m "Update image tag to ${BUILD_NUMBER}"
-                        git push https://${GIT_USER}:${GIT_PASS}@github.com/your-org/todoapp-manifests.git HEAD:main
+                        git push https://${GIT_USER}:${GIT_PASS}@github.com/rameshjavali/todoapp-manifests.git HEAD:main
                         """
                     }
                 }
@@ -59,4 +59,3 @@ pipeline {
         }
     }
 }
-
